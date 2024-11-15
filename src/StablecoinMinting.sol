@@ -108,17 +108,6 @@ contract StablecoinMinting {
         userStablecoinBalances[msg.sender] += mintableStablecoin;
     }
 
-    // Helper function
-    function getUserTotalCollateral(
-        address user
-    ) public view returns (uint256 totalCollateral) {
-        for (uint256 i = 0; i < allowedCollaterals.length; i++) {
-            totalCollateral += userCollateralBalances[user][
-                allowedCollaterals[i]
-            ];
-        }
-    }
-
     function redeemCollateral(
         IERC20 collateral,
         uint256 stablecoinAmount
