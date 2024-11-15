@@ -12,3 +12,7 @@ docs/
 
 # Dotenv file
 .env
+
+# Management
+node_modules
+lib
