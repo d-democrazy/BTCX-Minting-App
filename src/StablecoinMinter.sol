@@ -14,7 +14,7 @@ contract StablecoinMinting {
     string public constant name = "Bitcoin Extended";
     string public constant symbol = "BTCX";
     uint8 public constant decimals = 18;
-    uint256 public constant maximumSupply = 2_100_000_000 * 10 ** 18;
+    uint256 public constant maximumSupply = 2_100_000_000 * 10 ** decimals;
 
     uint256 public totalCollateralLocked;
 
