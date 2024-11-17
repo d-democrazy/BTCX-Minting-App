@@ -4,17 +4,17 @@ pragma solidity ^0.8.18;
 
 import {IERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {CollateralHelper} from "./CollateralHelper.sol";
+import {CollateralManager} from "./CollateralManager.sol";
 
 contract StablecoinMinting {
-    using CollateralHelper for IERC20[];
-    using CollateralHelper for mapping(address => mapping(IERC20 => uint256));
+    using CollateralManager for IERC20[];
+    using CollateralManager for mapping(address => mapping(IERC20 => uint256));
 
     // Defining variables
     string public constant name = "Bitcoin Extended";
     string public constant symbol = "BTCX";
     uint8 public constant decimals = 18;
-    uint256 public constant maximumSupply = 2_100_000_000 * 10 ** decimals;
+    uint256 public constant maximumSupply = 2_100_000_000 * 10 ** 18;
 
     uint256 public totalCollateralLocked;
 

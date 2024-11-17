@@ -16,3 +16,6 @@ docs/
 # Management
 node_modules
 lib
+
+# Work flow
+.github

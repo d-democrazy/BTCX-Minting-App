@@ -4,7 +4,7 @@ import {IERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20
 
 pragma solidity ^0.8.18;
 
-library CollateralHelper {
+library CollateralManager {
     /**
      * @dev Checks if the given collateral is in the aloowed collateral list.
      * @param allowedCollaterals Array of allowed collateral tokens.
