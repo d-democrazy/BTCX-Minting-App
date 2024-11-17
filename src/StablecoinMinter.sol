@@ -17,6 +17,8 @@ contract StablecoinMinting {
     uint256 public constant maximumSupply = 2_100_000_000 * 10 ** decimals;
 
     uint256 public totalCollateralLocked;
+    uint256 public immutable MINIMUM_COLLATERAL = 1e16;
+    uint256 public immutable MAXIMUM_COLLATERAL = 21_000_000 * decimals;
 
     IERC20[] public allowedCollaterals; // Allowed collaterals (stBTC, solvBTC, aBTC)
     uint256 public constant collateralToStablecoinRatio = 100; // Collateral : stablecoin is 1 : 100
@@ -84,8 +86,13 @@ contract StablecoinMinting {
     function mintStablecoin() external {
         // Ensure the total collateral locked accross all users meet the minimum treshold
         require(
-            totalCollateralLocked >= 1e16,
+            totalCollateralLocked >= MINIMUM_COLLATERAL,
             "Total collateral locked must be at least 0.01 units"
+        );
+
+        require(
+            totalCollateralLocked <= MAXIMUM_COLLATERAL,
+            "Total collateral locked exceeds 21,000,000 units"
         );
 
         // Use library to calculate the user's collateral balance
