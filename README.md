@@ -38,7 +38,7 @@
 
 # STABLECOIN DEPLOYMENT
 1. Deployment
-2. Helper config (RPC URL, API, ChainID) "Both Core TestMet and MainNet, excl. Anvill"
+2. Helper config (RPC URL, API, ChainID) "Both Core TestNet and MainNet, excl. Anvill"
 3. Interactions
 
 # STABLECOIN MINTER TEST
