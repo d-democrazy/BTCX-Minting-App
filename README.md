@@ -1,3 +1,6 @@
+# The Whitepaper
+https://coretoshi-ogs.gitbook.io/bitcoin-stable-protocol-bsp/
+
 # STABLECOIN MINTER APP
 
 1. MIT licensed

@@ -157,7 +157,7 @@ contract StablecoinMinting {
         uint256 amount = userCollateralBalances[msg.sender][collateral];
         require(amount > 0, "No collateral to withdraw");
 
-        // Decrease the total collateral lock by the amount being withdrawn
+        // Decrease the total collateral locked by the amount being withdrawn
         totalCollateralLocked -= amount;
 
         // Reset collateral balances and timestamps
