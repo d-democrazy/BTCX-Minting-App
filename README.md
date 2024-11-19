@@ -1,6 +1,14 @@
 # The Whitepaper
 https://coretoshi-ogs.gitbook.io/bitcoin-stable-protocol-bsp/
 
+# Chain Set Up
+- CORE_TESTNET_RPC_URL = "https://rpc.test.btcs.network" # CommandLine
+- CORE_MAINNET_RPC_URL = "https://rpc.coredao.org" # CommandLine
+- stBTC_CONTRACT_ADDRESS = `0x559852401e545f941F275B5674afAfcb1b51D147`
+- solvBTC_CONTRACT_ADDRESS = `0xF9173645D5A391d9Fb29Fc3438024499E3AC5eD0`
+- coreBTC_CONTRACT_ADDRESS = `0x2A41E6cBEcd491BcAc8EBEc766F696c6868dF5Bb`
+- WBTC_CONTRACT_ADDRESS = `0x7C346C27Ef3A48B1AE0454D994A49005C720D6FA`
+
 # STABLECOIN MINTER APP
 
 1. MIT licensed

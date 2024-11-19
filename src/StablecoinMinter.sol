@@ -6,7 +6,7 @@ import {IERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20
 import {SafeERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {CollateralManager} from "./CollateralManager.sol";
 
-contract StablecoinMinting {
+contract StablecoinMinter {
     using CollateralManager for IERC20[];
     using CollateralManager for mapping(address => mapping(IERC20 => uint256));
 
