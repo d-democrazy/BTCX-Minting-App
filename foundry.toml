@@ -2,5 +2,14 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+rpc_url = "https://rpc.test.btcs.network"
+
+[etherscan]
+core_testnet = { key = "${CORE_TESTNET_API_KEY}", url = "https://api.test.btcs.network/api" }
+sepolia = { key = "${SEPOLIA_API_KEY}", url = "https://api-sepolia.etherscan.io/api" }
+
+[rpc_endpoints]
+unknown_chain = "{CORE_TESTNET_RPC_URL}"
+sepolia = "${SEPOLIA_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
