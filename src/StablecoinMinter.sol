@@ -2,12 +2,15 @@
 
 pragma solidity ^0.8.18;
 
-import {IERC20} from "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {CollateralManager} from "src/CollateralManager.sol";
 
 contract StablecoinMinter {
-    /*****errors *******/ //
+    /**
+     * errors ******
+     */
+    //
     error StablecoinMinter__InsufficientAllowedCollateral();
     error StablecoinMinter__MoreThanZeroAmout();
     error StablecoinMinter__NotAllowedCollateral();
@@ -37,8 +40,7 @@ contract StablecoinMinter {
     IERC20[] public allowedCollaterals; // Allowed collaterals (stBTC, solvBTC, aBTC)
     uint256 public constant collateralToStablecoinRatio = 100; // Collateral : stablecoin is 1 : 100
 
-    mapping(address => mapping(IERC20 => uint256))
-        public userCollateralBalances;
+    mapping(address => mapping(IERC20 => uint256)) public userCollateralBalances;
     mapping(address => uint256) public userStablecoinBalances;
 
     mapping(address => mapping(IERC20 => uint256)) public lockExpiration;
@@ -59,11 +61,7 @@ contract StablecoinMinter {
         }
     }
 
-    function lockCollateral(
-        IERC20 collateral,
-        uint256 amount,
-        uint256 duration
-    ) external {
+    function lockCollateral(IERC20 collateral, uint256 amount, uint256 duration) external {
         if (amount <= 0) {
             revert StablecoinMinter__MoreThanZeroAmout();
         }
@@ -80,12 +78,8 @@ contract StablecoinMinter {
 
         // Validate duration: must be one of the allowed duration
         if (
-            duration != 10 days ||
-            duration != 30 days ||
-            duration != 90 days ||
-            duration != 180 days ||
-            duration != 365 days ||
-            duration != 1095 days
+            duration != 10 days || duration != 30 days || duration != 90 days || duration != 180 days
+                || duration != 365 days || duration != 1095 days
         ) {
             revert StablecoinMinter__InvalidLockDuration();
         }
@@ -108,12 +102,7 @@ contract StablecoinMinter {
         lockTimestamp[msg.sender][collateral] = block.timestamp;
 
         // Transfer collateral from the user to the contract
-        SafeERC20.safeTransferFrom(
-            collateral,
-            msg.sender,
-            address(this),
-            amount
-        );
+        SafeERC20.safeTransferFrom(collateral, msg.sender, address(this), amount);
     }
 
     function mintStablecoin() external {
@@ -135,19 +124,14 @@ contract StablecoinMinter {
         // );
 
         // Use library to calculate the user's collateral balance
-        uint256 userTotalCollateral = userCollateralBalances
-            .getUserTotalCollateral(allowedCollaterals, msg.sender);
+        uint256 userTotalCollateral = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, msg.sender);
 
         // Calculate user's mintable stablecoins based on their share of the total collateral
-        uint256 mintableStablecoin = (userTotalCollateral *
-            collateralToStablecoinRatio *
-            totalCollateralLocked) / totalCollateralLocked;
+        uint256 mintableStablecoin =
+            (userTotalCollateral * collateralToStablecoinRatio * totalCollateralLocked) / totalCollateralLocked;
 
         // Ensure minting doesn't exceed the maximum supply
-        if (
-            userStablecoinBalances[msg.sender] + mintableStablecoin <=
-            maximumSupply
-        ) {
+        if (userStablecoinBalances[msg.sender] + mintableStablecoin <= maximumSupply) {
             revert StablecoinMinter__ExceedsMaximumSupply();
         }
         // require(
@@ -160,10 +144,7 @@ contract StablecoinMinter {
         userStablecoinBalances[msg.sender] += mintableStablecoin;
     }
 
-    function redeemCollateral(
-        IERC20 collateral,
-        uint256 stablecoinAmount
-    ) external {
+    function redeemCollateral(IERC20 collateral, uint256 stablecoinAmount) external {
         if (userStablecoinBalances[msg.sender] >= stablecoinAmount) {
             revert StablecoinMinter__InsufficientStablecoinBalance();
         }
@@ -183,11 +164,8 @@ contract StablecoinMinter {
         //     "Lock expired, withdraw directly!"
         // );
 
-        uint256 collateralAmount = stablecoinAmount /
-            collateralToStablecoinRatio;
-        if (
-            userCollateralBalances[msg.sender][collateral] >= collateralAmount
-        ) {
+        uint256 collateralAmount = stablecoinAmount / collateralToStablecoinRatio;
+        if (userCollateralBalances[msg.sender][collateral] >= collateralAmount) {
             revert StablecoinMinter__InsufficientCollateralBalance();
         }
 
@@ -202,8 +180,7 @@ contract StablecoinMinter {
         SafeERC20.safeTransfer(collateral, msg.sender, collateralAmount);
 
         // Show countdown
-        uint256 remainingTime = lockExpiration[msg.sender][collateral] -
-            block.timestamp;
+        uint256 remainingTime = lockExpiration[msg.sender][collateral] - block.timestamp;
         emit LockCountdown(remainingTime, "Time remaining for unlock");
     }
 

@@ -5,11 +5,10 @@
  * 2. Deploy collateral mainnet addresses when we are on core mainnet
  * 3. Deploy collateral mocks addresses when we are on Sepolia
  */
-
 pragma solidity ^0.8.18;
 
 import {Script, console} from "forge-std/Script.sol";
-import {IERC20} from "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract HelperConfigTryout is Script {
     uint256 public constant CORE_TESTNET_ID = 1115;
@@ -79,7 +78,6 @@ contract HelperConfigTryout is Script {
      * Convert addresses into IERC20 instances dynamically for compatibility.
      * @return IERC20[] array of allowed collateral tokens.
      */
-
     function getAllowedCollaterals() public view returns (IERC20[] memory) {
         address[] memory addresses = activeNetworkConfig.collateralAddresses;
         IERC20[] memory allowedCollaterals = new IERC20[](addresses.length);

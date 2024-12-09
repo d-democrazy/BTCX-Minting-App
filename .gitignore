@@ -19,3 +19,6 @@ lib
 
 # Work flow
 .github
+
+# Standard Json Input
+standard.json
