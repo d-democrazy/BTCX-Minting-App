@@ -12,7 +12,7 @@ contract StablecoinMinter {
      */
     //
     error StablecoinMinter__InsufficientAllowedCollateral();
-    error StablecoinMinter__MoreThanZeroAmout();
+    error StablecoinMinter__MoreThanZeroAmount();
     error StablecoinMinter__NotAllowedCollateral();
     error StablecoinMinter__InvalidLockDuration();
     error StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum();
@@ -63,7 +63,7 @@ contract StablecoinMinter {
 
     function lockCollateral(IERC20 collateral, uint256 amount, uint256 duration) external {
         if (amount <= 0) {
-            revert StablecoinMinter__MoreThanZeroAmout();
+            revert StablecoinMinter__MoreThanZeroAmount();
         }
         // require(amount > 0, "Amount must be greater than zero");
 
@@ -78,8 +78,8 @@ contract StablecoinMinter {
 
         // Validate duration: must be one of the allowed duration
         if (
-            duration != 10 days || duration != 30 days || duration != 90 days || duration != 180 days
-                || duration != 365 days || duration != 1095 days
+            duration != 10 days && duration != 30 days && duration != 90 days && duration != 180 days
+                && duration != 365 days && duration != 1095 days
         ) {
             revert StablecoinMinter__InvalidLockDuration();
         }
