@@ -67,8 +67,8 @@ contract StablecoinMinterTest is Test {
         // Check constants
         assertEq(stablecoinMinter.name(), "Bitcoin Extended");
         assertEq(stablecoinMinter.symbol(), "BTCX");
-        assertEq(stablecoinMinter.decimals(), 18);
-        assertEq(stablecoinMinter.maximumSupply(), 2_100_000_000 * 10 ** 18);
+        assertEq(stablecoinMinter.decimals(), 1e18);
+        assertEq(stablecoinMinter.maximumSupply(), 2_100_000_000 * 1e18);
     }
 
     function testLockCollateralRevertsIfAmountIsZero() external {
@@ -157,5 +157,97 @@ contract StablecoinMinterTest is Test {
 
         assertEq(expiration, currentBlockTimeStamp + duration, "Lock expiration not set correctly");
         assertEq(timestamp, currentBlockTimeStamp, "Lock timestamp not set correctly");
+    }
+
+    function testMintStablecoinRevertsIfBelowMinimumCollateral() external {
+        // Make totalCollateralLocked <0.01
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, 0.005 ether, 30 days);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum.selector);
+
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+    }
+
+    function testLockCollateralRevertsIfExceedsMaximumCollateral() external {
+        // totalCollateralLocked slot idex is 0
+        bytes32 slotIndex = bytes32(uint256(0));
+        // Convert 21,000,000 to bytes32
+        uint256 maxCollateralRaw = 21_000_000 ether;
+        bytes32 storeValue = bytes32(maxCollateralRaw);
+
+        // Forcefully set totalCollateralLocked to 21,000,000 in the stablecoinMinter
+        vm.store(address(stablecoinMinter), slotIndex, storeValue);
+        console2.log("Forced totalCollateralLocked after store:", stablecoinMinter.totalCollateralLocked());
+
+        // Double check that the totalCollateralLocked is set correctly
+        uint256 forcedValue = stablecoinMinter.totalCollateralLocked();
+        assertEq(forcedValue, maxCollateralRaw, "Failed to set totalCollateralLocked to 21M");
+
+        // User tries to lock 0.1 additional collateral => totalCollateralLocked would become 21,000,000.1
+        // Expect revert with StablecoinMinter__TotalCollateralLockedExceedsMaximum
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__TotalCollateralLockedExceedsMaximum.selector);
+        stablecoinMinter.lockCollateral(mockCollateral1, 0.1 ether, 30 days);
+        vm.stopPrank();
+    }
+
+    function testMintStablecoinRevertsIfExceedsMaximumSupply() external {
+        // 1. Manually set totaolCollateralLocked to 21,000,000 ether via slot 0
+        bytes32 slot0 = bytes32(uint256(0));
+        uint256 maxCollateralRaw = 21_000_000 ether;
+        bytes32 value0 = bytes32(maxCollateralRaw);
+        vm.store(address(stablecoinMinter), slot0, value0);
+
+        // 2. Manually set userCollateralBalances[user][mockCollateral1] to 21,000,000 ether
+        bytes32 userSlot = keccak256(abi.encode(user, uint256(2))); // slot 2 is userCollateralBalances
+        bytes32 collateralSlot = keccak256(abi.encode(mockCollateral1, userSlot));
+        uint256 userCollateralAmount = 21_000_000 ether;
+        bytes32 value2 = bytes32(uint256(userCollateralAmount));
+        vm.store(address(stablecoinMinter), collateralSlot, value2);
+
+        // 3. Verify that totalCollateralLocked is correctly set
+        uint256 forcedTotalCollateral = stablecoinMinter.totalCollateralLocked();
+        assertEq(forcedTotalCollateral, maxCollateralRaw, "Failed to set totalCollateralLocked");
+
+        // 4. verify that userCollateralBalances[user][mockCollateral1] is correctly set
+        uint256 userCollateral = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
+        assertEq(userCollateral, userCollateralAmount, "Failed to set userCollateralBalances");
+
+        // 5. Mint once, should mint 21,000,000 * 100 = 2,100,000,000 stablecoins (maxSupply)
+        vm.startPrank(user);
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        // 6. Attempt to mint again, should fail with ExceedsMaximumSupply
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__ExceedsMaximumSupply.selector);
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+    }
+
+    function testMintStablecoinSuccess() external {
+        uint256 lockAmount = 5 * 1e17; // User locks 0.5 collateral units
+
+        // The user must call lockCollateral, not the test contract
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+        vm.stopPrank();
+
+        // totalCollateralLocked is now 0.5 (>= 0.01 && <= 21,000,000)
+        // So we pass the min and max checks
+
+        // userStablecoinBalances before = 0
+        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(user);
+
+        vm.startPrank(user);
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(user);
+
+        // 1:100 => 0.5 collateral * 100 ratio = 50 stablecoins minted
+        uint256 expectedMint = 5 * 1e17 * 100; // 50 stablecoins (assuming same decimals logic)
+        require(userStablecoinsAfter == userStablecoinsBefore + expectedMint, "Incorrect mint amount");
     }
 }

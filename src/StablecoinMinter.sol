@@ -16,7 +16,7 @@ contract StablecoinMinter {
     error StablecoinMinter__NotAllowedCollateral();
     error StablecoinMinter__InvalidLockDuration();
     error StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum();
-    error StablecoinMinter__TotalCollateralLockedExcedsMaximum();
+    error StablecoinMinter__TotalCollateralLockedExceedsMaximum();
     error StablecoinMinter__ExceedsMaximumSupply();
     error StablecoinMinter__InsufficientStablecoinBalance();
     error StablecoinMinter__LockExpired_WithdrawDirectly();
@@ -30,8 +30,8 @@ contract StablecoinMinter {
     // Defining variables
     string public constant name = "Bitcoin Extended";
     string public constant symbol = "BTCX";
-    uint8 public constant decimals = 18;
-    uint256 public constant maximumSupply = 2_100_000_000 * 10 ** decimals;
+    uint256 public constant decimals = 1e18;
+    uint256 public constant maximumSupply = 2_100_000_000 * decimals;
 
     uint256 public totalCollateralLocked;
     uint256 public immutable MINIMUM_COLLATERAL = 1e16;
@@ -93,6 +93,10 @@ contract StablecoinMinter {
         //     "Invalid lock durations"
         // );
 
+        if (totalCollateralLocked + amount > MAXIMUM_COLLATERAL) {
+            revert StablecoinMinter__TotalCollateralLockedExceedsMaximum();
+        }
+
         // Update the user's collateral balances and the total collateral locked
         userCollateralBalances[msg.sender][collateral] += amount;
         totalCollateralLocked += amount;
@@ -106,8 +110,9 @@ contract StablecoinMinter {
     }
 
     function mintStablecoin() external {
+        uint256 amount;
         // Ensure the total collateral locked accross all users meet the minimum treshold
-        if (totalCollateralLocked >= MINIMUM_COLLATERAL) {
+        if (totalCollateralLocked < MINIMUM_COLLATERAL) {
             revert StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum();
         }
 
@@ -115,8 +120,8 @@ contract StablecoinMinter {
         //     totalCollateralLocked >= MINIMUM_COLLATERAL,
         //     "Total collateral locked must be at least 0.01 units"
         // );
-        if (totalCollateralLocked <= MAXIMUM_COLLATERAL) {
-            revert StablecoinMinter__TotalCollateralLockedExcedsMaximum();
+        if (totalCollateralLocked + amount > MAXIMUM_COLLATERAL) {
+            revert StablecoinMinter__TotalCollateralLockedExceedsMaximum();
         }
         // require(
         //     totalCollateralLocked <= MAXIMUM_COLLATERAL,
@@ -131,7 +136,7 @@ contract StablecoinMinter {
             (userTotalCollateral * collateralToStablecoinRatio * totalCollateralLocked) / totalCollateralLocked;
 
         // Ensure minting doesn't exceed the maximum supply
-        if (userStablecoinBalances[msg.sender] + mintableStablecoin <= maximumSupply) {
+        if (userStablecoinBalances[msg.sender] + mintableStablecoin > maximumSupply) {
             revert StablecoinMinter__ExceedsMaximumSupply();
         }
         // require(
