@@ -46,7 +46,7 @@ contract StablecoinMinter {
     mapping(address => mapping(IERC20 => uint256)) public lockExpiration;
     mapping(address => mapping(IERC20 => uint256)) public lockTimestamp;
 
-    event LockCountdown(uint256 remainingTime, string message);
+    event LockCountdown(address indexed user, IERC20 indexed collateral, uint256 remainingTime, uint256 timestamp);
 
     constructor(IERC20[] memory _allowedCollaterals) {
         if (_allowedCollaterals.length == 0) {
@@ -150,7 +150,8 @@ contract StablecoinMinter {
     }
 
     function redeemCollateral(IERC20 collateral, uint256 stablecoinAmount) external {
-        if (userStablecoinBalances[msg.sender] >= stablecoinAmount) {
+        // Check if user has enough stablecoins
+        if (userStablecoinBalances[msg.sender] < stablecoinAmount) {
             revert StablecoinMinter__InsufficientStablecoinBalance();
         }
 
@@ -159,8 +160,8 @@ contract StablecoinMinter {
         //     "Insufficient stablecoin balance"
         // );
 
-        // Ensure the lock is still active
-        if (block.timestamp < lockExpiration[msg.sender][collateral]) {
+        // If the is EXPIRED (block.timestamp >= lockExpiration), revert
+        if (block.timestamp >= lockExpiration[msg.sender][collateral]) {
             revert StablecoinMinter__LockExpired_WithdrawDirectly();
         }
 
@@ -169,8 +170,9 @@ contract StablecoinMinter {
         //     "Lock expired, withdraw directly!"
         // );
 
+        // Check if user has enough collateral
         uint256 collateralAmount = stablecoinAmount / collateralToStablecoinRatio;
-        if (userCollateralBalances[msg.sender][collateral] >= collateralAmount) {
+        if (userCollateralBalances[msg.sender][collateral] < collateralAmount) {
             revert StablecoinMinter__InsufficientCollateralBalance();
         }
 
@@ -184,9 +186,9 @@ contract StablecoinMinter {
         userCollateralBalances[msg.sender][collateral] -= collateralAmount;
         SafeERC20.safeTransfer(collateral, msg.sender, collateralAmount);
 
-        // Show countdown
+        // Emit LockCountDown
         uint256 remainingTime = lockExpiration[msg.sender][collateral] - block.timestamp;
-        emit LockCountdown(remainingTime, "Time remaining for unlock");
+        emit LockCountdown(msg.sender, collateral, remainingTime, block.timestamp);
     }
 
     function withdrawCollateral(IERC20 collateral) external {

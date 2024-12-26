@@ -15,6 +15,8 @@ contract StablecoinMinterTest is Test {
 
     address user = address(0x123);
 
+    event LockCountdown(address indexed user, IERC20 indexed collateral, uint256 remainingTime, uint256 timestamp);
+
     function setUp() external {
         // Deploy mock allowed and disallowed collateral tokens for testing
         mockCollateral1 = new MockERC20("Collateral1", "MBTC1", 1_000_000 ether);
@@ -249,5 +251,134 @@ contract StablecoinMinterTest is Test {
         // 1:100 => 0.5 collateral * 100 ratio = 50 stablecoins minted
         uint256 expectedMint = 5 * 1e17 * 100; // 50 stablecoins (assuming same decimals logic)
         require(userStablecoinsAfter == userStablecoinsBefore + expectedMint, "Incorrect mint amount");
+    }
+
+    function testRedeemCollateralRevertsIfInsufficientStablecoinBalance() external {
+        // 1. User locks 1 collateral unit (1 ether)
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+
+        // 2. User mints 100 stablecoins (1:100 ratio)
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        // 3. User attemps to redeem 150 stablecoins (more than minted)
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__InsufficientStablecoinBalance.selector);
+        stablecoinMinter.redeemCollateral(mockCollateral1, 150 * 1e18);
+        vm.stopPrank();
+    }
+
+    function testRedeemCollateralRevertsIfLockExpired_ShouldWithdrawDirectly() external {
+        // 1. User locks 1 collateral unit for 30 days
+        uint256 lockAmount = 1 ether;
+        uint256 lockDuration = 30 days;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, lockDuration);
+
+        // 2. User mints 100 stablecoins
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        // 3. Advance time by 31 days to expire the lock
+        vm.warp(block.timestamp + 31 days);
+
+        // 4. User attemps to redeem stablecoins after lock expiration
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__LockExpired_WithdrawDirectly.selector);
+        stablecoinMinter.redeemCollateral(mockCollateral1, 50 * 1e18); // Attempt to redeem 50 stablecoins
+        vm.stopPrank();
+    }
+
+    function testRedeemCollateralRevertsIfinsufficientCollateralBalance() external {
+        // 1. User locks 1 collateral unit (1 ether)
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+
+        // 2. User mints 100 stablecoins
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        bytes32 stablecoinBalanceSlot = keccak256(abi.encode(user, uint256(3)));
+        vm.store(address(stablecoinMinter), stablecoinBalanceSlot, bytes32(uint256(200 * 1e18)));
+
+        // 3. User attempts to redeem 150 stablecoins, which would require 1.5 collateral units
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__InsufficientCollateralBalance.selector);
+        stablecoinMinter.redeemCollateral(mockCollateral1, 150 * 1e18); // Attempt to redeem 150 stablecoins
+        vm.stopPrank();
+    }
+
+    function testRedeemCollateralSuccess() external {
+        // 1. User locks 1 collateral unit (1 ether) for 30 days
+        uint256 lockAmount = 1 ether;
+        uint256 lockDuration = 30 days;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, lockDuration);
+
+        // 2. User mints 100 stablecoins
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+
+        // 3. Prepare to redeem 50 stablecoins (corresponding to 0.5 collateral uints)
+        uint256 redeemAmount = 50 * 1e18; // 50 stablecoins
+        uint256 expectedRedeemCollateral = redeemAmount / 100; // 1:100 ratio
+
+        // 4. Capture initial balances
+        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(user);
+        uint256 userCollateralBefore = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
+        uint256 contractCollateralBefore = mockCollateral1.balanceOf(address(stablecoinMinter));
+        uint256 userCollateralTokensBefore = mockCollateral1.balanceOf(user);
+
+        // 5. Calculate remaining time for LockCountdown event
+        uint256 lockExpiration = stablecoinMinter.lockExpiration(user, mockCollateral1);
+        uint256 currentTimestamp = block.timestamp;
+        uint256 expectedRemainingTime = lockExpiration - currentTimestamp;
+
+        // 6. Expect the LockCountdown event
+        vm.expectEmit(true, true, true, true);
+        emit LockCountdown(user, mockCollateral1, expectedRemainingTime, currentTimestamp);
+
+        // 7. User redeems 50 stablecoins
+        vm.startPrank(user);
+        stablecoinMinter.redeemCollateral(mockCollateral1, redeemAmount);
+        vm.stopPrank();
+
+        // 8. Capture final balances
+        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(user);
+        uint256 userCollateralAfter = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
+        uint256 contractCollateralAfter = mockCollateral1.balanceOf(address(stablecoinMinter));
+        uint256 userCollateralTokensAfter = mockCollateral1.balanceOf(user);
+
+        // 9. Assertions
+        // a. User's stablecoin balance should decrease by 50
+        assertEq(
+            userStablecoinsAfter,
+            userStablecoinsBefore - redeemAmount,
+            "User stablecoin balance not decreased correctly"
+        );
+
+        // b. User's collateral balance should decreased by 0.5
+        assertEq(
+            userCollateralAfter,
+            userCollateralBefore - expectedRedeemCollateral,
+            "User collateral balance not decreased correctly"
+        );
+
+        // c. Contract's collateral balance should decrease by 0.5
+        assertEq(
+            contractCollateralAfter,
+            contractCollateralBefore - expectedRedeemCollateral,
+            "Contract collateral balance not decreased correctly"
+        );
+
+        // d. User's collateral tokens should increased by 0.5
+        assertEq(
+            userCollateralTokensAfter,
+            userCollateralTokensBefore + expectedRedeemCollateral,
+            "User collateral tokens not increased correctly"
+        );
     }
 }
