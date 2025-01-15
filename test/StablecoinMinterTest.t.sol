@@ -15,13 +15,26 @@ contract StablecoinMinterTest is Test {
 
     address user = address(0x123);
 
-    event LockCountdown(address indexed user, IERC20 indexed collateral, uint256 remainingTime, uint256 timestamp);
+    event LockCountdown(
+        address indexed user,
+        IERC20 indexed collateral,
+        uint256 remainingTime,
+        uint256 timestamp
+    );
 
     function setUp() external {
         // Deploy mock allowed and disallowed collateral tokens for testing
-        mockCollateral1 = new MockERC20("Collateral1", "MBTC1", 1_000_000 ether);
+        mockCollateral1 = new MockERC20(
+            "Collateral1",
+            "MBTC1",
+            1_000_000 ether
+        );
         mockCollateral2 = new MockERC20("Collateral2", "MBTC2", 500_000 ether);
-        disallowedCollateral = new MockERC20("Disallowed collateral", "dMCK", 1_000_000 ether);
+        disallowedCollateral = new MockERC20(
+            "Disallowed collateral",
+            "dMCK",
+            1_000_000 ether
+        );
 
         // Create an array with one or multiple allowed collaterals
         IERC20[] memory allowed = new IERC20[](2);
@@ -40,7 +53,10 @@ contract StablecoinMinterTest is Test {
         vm.startPrank(user);
         mockCollateral1.approve(address(stablecoinMinter), type(uint256).max);
         mockCollateral2.approve(address(stablecoinMinter), type(uint256).max);
-        disallowedCollateral.approve(address(stablecoinMinter), type(uint256).max);
+        disallowedCollateral.approve(
+            address(stablecoinMinter),
+            type(uint256).max
+        );
         vm.stopPrank();
     }
 
@@ -49,7 +65,11 @@ contract StablecoinMinterTest is Test {
         IERC20[] memory emptyCollaterals = new IERC20[](0);
 
         // Expect revert with the specific custom error
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__InsufficientAllowedCollateral.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__InsufficientAllowedCollateral
+                .selector
+        );
 
         // Attempt deployment
         new StablecoinMinter(emptyCollaterals);
@@ -63,8 +83,16 @@ contract StablecoinMinterTest is Test {
         IERC20 firstCollateral = stablecoinMinter.allowedCollaterals(0);
         IERC20 secondCollateral = stablecoinMinter.allowedCollaterals(1);
 
-        assertEq(address(firstCollateral), address(mockCollateral1), "first collateral address");
-        assertEq(address(secondCollateral), address(mockCollateral2), "Second collateral address");
+        assertEq(
+            address(firstCollateral),
+            address(mockCollateral1),
+            "first collateral address"
+        );
+        assertEq(
+            address(secondCollateral),
+            address(mockCollateral2),
+            "Second collateral address"
+        );
 
         // Check constants
         assertEq(stablecoinMinter.name(), "Bitcoin Extended");
@@ -79,18 +107,28 @@ contract StablecoinMinterTest is Test {
         allowedCollaterals[0] = IERC20(address(mockCollateral1));
         allowedCollaterals[1] = IERC20(address(mockCollateral2));
 
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__MoreThanZeroAmount.selector);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__MoreThanZeroAmount.selector
+        );
         stablecoinMinter.lockCollateral(allowedCollaterals[0], 0, 30 days);
 
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__MoreThanZeroAmount.selector);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__MoreThanZeroAmount.selector
+        );
         stablecoinMinter.lockCollateral(allowedCollaterals[1], 0, 30 days);
     }
 
     function testLockCollateralRevertsIfNotAllowedCollateral() external {
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__NotAllowedCollateral.selector);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__NotAllowedCollateral.selector
+        );
 
-        stablecoinMinter.lockCollateral(disallowedCollateral, 100 ether, 30 days);
+        stablecoinMinter.lockCollateral(
+            disallowedCollateral,
+            100 ether,
+            30 days
+        );
         vm.stopPrank();
     }
 
@@ -99,9 +137,15 @@ contract StablecoinMinterTest is Test {
         IERC20[] memory allowedCollaterals = new IERC20[](2);
         allowedCollaterals[0] = IERC20(address(mockCollateral1));
         allowedCollaterals[1] = IERC20(address(mockCollateral2));
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__InvalidLockDuration.selector);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__InvalidLockDuration.selector
+        );
 
-        stablecoinMinter.lockCollateral(allowedCollaterals[0], 100 ether, 60 days); // not allowed
+        stablecoinMinter.lockCollateral(
+            allowedCollaterals[0],
+            100 ether,
+            60 days
+        ); // not allowed
         vm.stopPrank();
     }
 
@@ -119,13 +163,23 @@ contract StablecoinMinterTest is Test {
         }
         uint256 initialContractBalance = 0;
         for (uint256 i = 0; i < allowedCollaterals.length; i++) {
-            initialContractBalance += allowedCollaterals[i].balanceOf(address(stablecoinMinter));
+            initialContractBalance += allowedCollaterals[i].balanceOf(
+                address(stablecoinMinter)
+            );
         }
-        uint256 initialUserCollateral = stablecoinMinter.userCollateralBalances(user, allowedCollaterals[0]);
-        uint256 initialTotalCollateral = stablecoinMinter.totalCollateralLocked();
+        uint256 initialUserCollateral = stablecoinMinter.userCollateralBalances(
+            user,
+            allowedCollaterals[0]
+        );
+        uint256 initialTotalCollateral = stablecoinMinter
+            .totalCollateralLocked();
 
         vm.startPrank(user);
-        stablecoinMinter.lockCollateral(allowedCollaterals[0], lockAmount, duration);
+        stablecoinMinter.lockCollateral(
+            allowedCollaterals[0],
+            lockAmount,
+            duration
+        );
         vm.stopPrank();
 
         // Check final balances and states
@@ -135,37 +189,74 @@ contract StablecoinMinterTest is Test {
         }
         uint256 finalContractBalance = 0;
         for (uint256 i = 0; i < allowedCollaterals.length; i++) {
-            finalContractBalance += allowedCollaterals[i].balanceOf(address(stablecoinMinter));
+            finalContractBalance += allowedCollaterals[i].balanceOf(
+                address(stablecoinMinter)
+            );
         }
-        uint256 finalUserCollateral = stablecoinMinter.userCollateralBalances(user, allowedCollaterals[0]);
+        uint256 finalUserCollateral = stablecoinMinter.userCollateralBalances(
+            user,
+            allowedCollaterals[0]
+        );
         uint256 finalTotalCollateral = stablecoinMinter.totalCollateralLocked();
 
         // User collateral balance should increase by lockAmount
-        assertEq(finalUserCollateral, initialUserCollateral + lockAmount, "User collateral not updated correctly");
+        assertEq(
+            finalUserCollateral,
+            initialUserCollateral + lockAmount,
+            "User collateral not updated correctly"
+        );
 
         // Total collateral locked should increase by lockAmount
-        assertEq(finalTotalCollateral, initialTotalCollateral + lockAmount, "Total collateral not updated correctly");
+        assertEq(
+            finalTotalCollateral,
+            initialTotalCollateral + lockAmount,
+            "Total collateral not updated correctly"
+        );
 
         // Check token transfer
-        assertEq(finalUserBalance, initialUserBalance - lockAmount, "User token balance not reduced correctly");
         assertEq(
-            finalContractBalance, initialContractBalance + lockAmount, "Contract token balance not increased correctly"
+            finalUserBalance,
+            initialUserBalance - lockAmount,
+            "User token balance not reduced correctly"
+        );
+        assertEq(
+            finalContractBalance,
+            initialContractBalance + lockAmount,
+            "Contract token balance not increased correctly"
         );
 
         // Check lock expiration and timestamp
-        uint256 expiration = stablecoinMinter.lockExpiration(user, allowedCollaterals[0]);
-        uint256 timestamp = stablecoinMinter.lockTimestamp(user, allowedCollaterals[0]);
+        uint256 expiration = stablecoinMinter.lockExpiration(
+            user,
+            allowedCollaterals[0]
+        );
+        uint256 timestamp = stablecoinMinter.lockTimestamp(
+            user,
+            allowedCollaterals[0]
+        );
         uint256 currentBlockTimeStamp = block.timestamp;
 
-        assertEq(expiration, currentBlockTimeStamp + duration, "Lock expiration not set correctly");
-        assertEq(timestamp, currentBlockTimeStamp, "Lock timestamp not set correctly");
+        assertEq(
+            expiration,
+            currentBlockTimeStamp + duration,
+            "Lock expiration not set correctly"
+        );
+        assertEq(
+            timestamp,
+            currentBlockTimeStamp,
+            "Lock timestamp not set correctly"
+        );
     }
 
     function testMintStablecoinRevertsIfBelowMinimumCollateral() external {
         // Make totalCollateralLocked <0.01
         vm.startPrank(user);
         stablecoinMinter.lockCollateral(mockCollateral1, 0.005 ether, 30 days);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum
+                .selector
+        );
 
         stablecoinMinter.mintStablecoin();
         vm.stopPrank();
@@ -180,16 +271,27 @@ contract StablecoinMinterTest is Test {
 
         // Forcefully set totalCollateralLocked to 21,000,000 in the stablecoinMinter
         vm.store(address(stablecoinMinter), slotIndex, storeValue);
-        console2.log("Forced totalCollateralLocked after store:", stablecoinMinter.totalCollateralLocked());
+        console2.log(
+            "Forced totalCollateralLocked after store:",
+            stablecoinMinter.totalCollateralLocked()
+        );
 
         // Double check that the totalCollateralLocked is set correctly
         uint256 forcedValue = stablecoinMinter.totalCollateralLocked();
-        assertEq(forcedValue, maxCollateralRaw, "Failed to set totalCollateralLocked to 21M");
+        assertEq(
+            forcedValue,
+            maxCollateralRaw,
+            "Failed to set totalCollateralLocked to 21M"
+        );
 
         // User tries to lock 0.1 additional collateral => totalCollateralLocked would become 21,000,000.1
         // Expect revert with StablecoinMinter__TotalCollateralLockedExceedsMaximum
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__TotalCollateralLockedExceedsMaximum.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__TotalCollateralLockedExceedsMaximum
+                .selector
+        );
         stablecoinMinter.lockCollateral(mockCollateral1, 0.1 ether, 30 days);
         vm.stopPrank();
     }
@@ -203,18 +305,32 @@ contract StablecoinMinterTest is Test {
 
         // 2. Manually set userCollateralBalances[user][mockCollateral1] to 21,000,000 ether
         bytes32 userSlot = keccak256(abi.encode(user, uint256(2))); // slot 2 is userCollateralBalances
-        bytes32 collateralSlot = keccak256(abi.encode(mockCollateral1, userSlot));
+        bytes32 collateralSlot = keccak256(
+            abi.encode(mockCollateral1, userSlot)
+        );
         uint256 userCollateralAmount = 21_000_000 ether;
         bytes32 value2 = bytes32(uint256(userCollateralAmount));
         vm.store(address(stablecoinMinter), collateralSlot, value2);
 
         // 3. Verify that totalCollateralLocked is correctly set
-        uint256 forcedTotalCollateral = stablecoinMinter.totalCollateralLocked();
-        assertEq(forcedTotalCollateral, maxCollateralRaw, "Failed to set totalCollateralLocked");
+        uint256 forcedTotalCollateral = stablecoinMinter
+            .totalCollateralLocked();
+        assertEq(
+            forcedTotalCollateral,
+            maxCollateralRaw,
+            "Failed to set totalCollateralLocked"
+        );
 
         // 4. verify that userCollateralBalances[user][mockCollateral1] is correctly set
-        uint256 userCollateral = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
-        assertEq(userCollateral, userCollateralAmount, "Failed to set userCollateralBalances");
+        uint256 userCollateral = stablecoinMinter.userCollateralBalances(
+            user,
+            mockCollateral1
+        );
+        assertEq(
+            userCollateral,
+            userCollateralAmount,
+            "Failed to set userCollateralBalances"
+        );
 
         // 5. Mint once, should mint 21,000,000 * 100 = 2,100,000,000 stablecoins (maxSupply)
         vm.startPrank(user);
@@ -223,7 +339,9 @@ contract StablecoinMinterTest is Test {
 
         // 6. Attempt to mint again, should fail with ExceedsMaximumSupply
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__ExceedsMaximumSupply.selector);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__ExceedsMaximumSupply.selector
+        );
         stablecoinMinter.mintStablecoin();
         vm.stopPrank();
     }
@@ -240,20 +358,29 @@ contract StablecoinMinterTest is Test {
         // So we pass the min and max checks
 
         // userStablecoinBalances before = 0
-        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(user);
+        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(
+            user
+        );
 
         vm.startPrank(user);
         stablecoinMinter.mintStablecoin();
         vm.stopPrank();
 
-        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(user);
+        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(
+            user
+        );
 
         // 1:100 => 0.5 collateral * 100 ratio = 50 stablecoins minted
         uint256 expectedMint = 5 * 1e17 * 100; // 50 stablecoins (assuming same decimals logic)
-        require(userStablecoinsAfter == userStablecoinsBefore + expectedMint, "Incorrect mint amount");
+        require(
+            userStablecoinsAfter == userStablecoinsBefore + expectedMint,
+            "Incorrect mint amount"
+        );
     }
 
-    function testRedeemCollateralRevertsIfInsufficientStablecoinBalance() external {
+    function testRedeemCollateralRevertsIfInsufficientStablecoinBalance()
+        external
+    {
         // 1. User locks 1 collateral unit (1 ether)
         uint256 lockAmount = 1 ether;
         vm.startPrank(user);
@@ -265,17 +392,27 @@ contract StablecoinMinterTest is Test {
 
         // 3. User attemps to redeem 150 stablecoins (more than minted)
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__InsufficientStablecoinBalance.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__InsufficientStablecoinBalance
+                .selector
+        );
         stablecoinMinter.redeemCollateral(mockCollateral1, 150 * 1e18);
         vm.stopPrank();
     }
 
-    function testRedeemCollateralRevertsIfLockExpired_ShouldWithdrawDirectly() external {
+    function testRedeemCollateralRevertsIfLockExpired_ShouldWithdrawDirectly()
+        external
+    {
         // 1. User locks 1 collateral unit for 30 days
         uint256 lockAmount = 1 ether;
         uint256 lockDuration = 30 days;
         vm.startPrank(user);
-        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, lockDuration);
+        stablecoinMinter.lockCollateral(
+            mockCollateral1,
+            lockAmount,
+            lockDuration
+        );
 
         // 2. User mints 100 stablecoins
         stablecoinMinter.mintStablecoin();
@@ -286,12 +423,18 @@ contract StablecoinMinterTest is Test {
 
         // 4. User attemps to redeem stablecoins after lock expiration
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__LockExpired_WithdrawDirectly.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__LockExpired_WithdrawDirectly
+                .selector
+        );
         stablecoinMinter.redeemCollateral(mockCollateral1, 50 * 1e18); // Attempt to redeem 50 stablecoins
         vm.stopPrank();
     }
 
-    function testRedeemCollateralRevertsIfinsufficientCollateralBalance() external {
+    function testRedeemCollateralRevertsIfinsufficientCollateralBalance()
+        external
+    {
         // 1. User locks 1 collateral unit (1 ether)
         uint256 lockAmount = 1 ether;
         vm.startPrank(user);
@@ -302,11 +445,19 @@ contract StablecoinMinterTest is Test {
         vm.stopPrank();
 
         bytes32 stablecoinBalanceSlot = keccak256(abi.encode(user, uint256(3)));
-        vm.store(address(stablecoinMinter), stablecoinBalanceSlot, bytes32(uint256(200 * 1e18)));
+        vm.store(
+            address(stablecoinMinter),
+            stablecoinBalanceSlot,
+            bytes32(uint256(200 * 1e18))
+        );
 
         // 3. User attempts to redeem 150 stablecoins, which would require 1.5 collateral units
         vm.startPrank(user);
-        vm.expectRevert(StablecoinMinter.StablecoinMinter__InsufficientCollateralBalance.selector);
+        vm.expectRevert(
+            StablecoinMinter
+                .StablecoinMinter__InsufficientCollateralBalance
+                .selector
+        );
         stablecoinMinter.redeemCollateral(mockCollateral1, 150 * 1e18); // Attempt to redeem 150 stablecoins
         vm.stopPrank();
     }
@@ -316,7 +467,11 @@ contract StablecoinMinterTest is Test {
         uint256 lockAmount = 1 ether;
         uint256 lockDuration = 30 days;
         vm.startPrank(user);
-        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, lockDuration);
+        stablecoinMinter.lockCollateral(
+            mockCollateral1,
+            lockAmount,
+            lockDuration
+        );
 
         // 2. User mints 100 stablecoins
         stablecoinMinter.mintStablecoin();
@@ -327,19 +482,34 @@ contract StablecoinMinterTest is Test {
         uint256 expectedRedeemCollateral = redeemAmount / 100; // 1:100 ratio
 
         // 4. Capture initial balances
-        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(user);
-        uint256 userCollateralBefore = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
-        uint256 contractCollateralBefore = mockCollateral1.balanceOf(address(stablecoinMinter));
+        uint256 userStablecoinsBefore = stablecoinMinter.userStablecoinBalances(
+            user
+        );
+        uint256 userCollateralBefore = stablecoinMinter.userCollateralBalances(
+            user,
+            mockCollateral1
+        );
+        uint256 contractCollateralBefore = mockCollateral1.balanceOf(
+            address(stablecoinMinter)
+        );
         uint256 userCollateralTokensBefore = mockCollateral1.balanceOf(user);
 
         // 5. Calculate remaining time for LockCountdown event
-        uint256 lockExpiration = stablecoinMinter.lockExpiration(user, mockCollateral1);
+        uint256 lockExpiration = stablecoinMinter.lockExpiration(
+            user,
+            mockCollateral1
+        );
         uint256 currentTimestamp = block.timestamp;
         uint256 expectedRemainingTime = lockExpiration - currentTimestamp;
 
         // 6. Expect the LockCountdown event
         vm.expectEmit(true, true, true, true);
-        emit LockCountdown(user, mockCollateral1, expectedRemainingTime, currentTimestamp);
+        emit LockCountdown(
+            user,
+            mockCollateral1,
+            expectedRemainingTime,
+            currentTimestamp
+        );
 
         // 7. User redeems 50 stablecoins
         vm.startPrank(user);
@@ -347,9 +517,16 @@ contract StablecoinMinterTest is Test {
         vm.stopPrank();
 
         // 8. Capture final balances
-        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(user);
-        uint256 userCollateralAfter = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
-        uint256 contractCollateralAfter = mockCollateral1.balanceOf(address(stablecoinMinter));
+        uint256 userStablecoinsAfter = stablecoinMinter.userStablecoinBalances(
+            user
+        );
+        uint256 userCollateralAfter = stablecoinMinter.userCollateralBalances(
+            user,
+            mockCollateral1
+        );
+        uint256 contractCollateralAfter = mockCollateral1.balanceOf(
+            address(stablecoinMinter)
+        );
         uint256 userCollateralTokensAfter = mockCollateral1.balanceOf(user);
 
         // 9. Assertions
@@ -380,5 +557,21 @@ contract StablecoinMinterTest is Test {
             userCollateralTokensBefore + expectedRedeemCollateral,
             "User collateral tokens not increased correctly"
         );
+    }
+
+    function testWithdrawCollateralRevertsIfLockNotExpired() external {
+        // 1. Lock collateral for 30 days
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+        vm.stopPrank();
+
+        // 2. Attempt to withdraw immediately (no time warp)
+        vm.startPrank(user);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__LockStillAlive.selector
+        );
+        stablecoinMinter.withdrawCollateral(mockCollateral1);
+        vm.stopPrank();
     }
 }
