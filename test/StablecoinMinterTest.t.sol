@@ -574,4 +574,36 @@ contract StablecoinMinterTest is Test {
         stablecoinMinter.withdrawCollateral(mockCollateral1);
         vm.stopPrank();
     }
+
+    function testWithdrawCollateralRevertsIfNoCollateralAfterExpiration()
+        external
+    {
+        // 1. Lock collateral for 30 days
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+        vm.stopPrank();
+
+        // 2. Advance time to expire the lock
+        vm.warp(block.timestamp + 31 days);
+
+        // 3. Set user's collateral balances to 0. Skip redeem scenario.
+        bytes32 userCollateralSlot = keccak256(abi.encode(user, uint256(2)));
+        bytes32 userFinalCollateralSlot = keccak256(
+            abi.encode(mockCollateral1, userCollateralSlot)
+        );
+        vm.store(
+            address(stablecoinMinter),
+            userFinalCollateralSlot,
+            bytes32(uint256(0))
+        );
+
+        // 4. Attemp to withdraw
+        vm.startPrank(user);
+        vm.expectRevert(
+            StablecoinMinter.StablecoinMinter__NoCollateralToWithdraw.selector
+        );
+        stablecoinMinter.withdrawCollateral(mockCollateral1);
+        vm.stopPrank();
+    }
 }
