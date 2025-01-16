@@ -417,4 +417,117 @@ contract StablecoinMinterTest is Test {
         stablecoinMinter.withdrawCollateral(mockCollateral1);
         vm.stopPrank();
     }
+
+    function testWithdrawCollateralSuccessAfterExpiration() external {
+        // 1. Lock collateral for 30 days
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+        vm.stopPrank();
+
+        // 2. Advance time to pass the expiration
+        vm.warp(block.timestamp + 31 days);
+
+        // 3. Capture pre-state
+        uint256 totalCollateralBefore = stablecoinMinter.totalCollateralLocked();
+        uint256 userCollateralBefore = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
+        uint256 lockExpirationBefore = stablecoinMinter.lockExpiration(user, mockCollateral1);
+        uint256 userTokenBalanceBefore = mockCollateral1.balanceOf(user);
+
+        // Sanity checks
+        assertEq(userCollateralBefore, lockAmount, "User collateral should be lockAmount");
+        assertGe(totalCollateralBefore, lockAmount, "totalCollateralLocked should be >= lockAmount");
+        assertTrue(block.timestamp >= lockExpirationBefore, "Should be expired or beyond");
+
+        // 4. Withdraw
+        vm.startPrank(user);
+        stablecoinMinter.withdrawCollateral(mockCollateral1);
+        vm.stopPrank();
+
+        // 5. Capture post-state
+        uint256 totalCollateralAfter = stablecoinMinter.totalCollateralLocked();
+        uint256 userCollateralAfter = stablecoinMinter.userCollateralBalances(user, mockCollateral1);
+        uint256 lockExpirationAfter = stablecoinMinter.lockExpiration(user, mockCollateral1);
+        uint256 lockTimestampAfter = stablecoinMinter.lockTimestamp(user, mockCollateral1);
+        uint256 userTokenBalanceAfter = mockCollateral1.balanceOf(user);
+
+        // 6. Assertions
+        // totalCollateralLocked decreased by exactly lockAmount
+        assertEq(
+            totalCollateralAfter,
+            totalCollateralBefore - lockAmount,
+            "totalCollateralLocked didn't decrease by lockAmount"
+        );
+
+        // userCollateralBalances reset to 0
+        assertEq(userCollateralAfter, 0, "User collateral balance not reset to zero");
+
+        // lockExpiration and lockTimeStamp reset 0
+        assertEq(lockExpirationAfter, 0, "Lock expiration not reset to zero");
+        assertEq(lockTimestampAfter, 0, "Lock Timestamp not reset to zero");
+
+        // user token balance increased by lockAmount
+        assertEq(
+            userTokenBalanceAfter,
+            userTokenBalanceBefore + lockAmount,
+            "User token balance did not increase by lockAmount"
+        );
+    }
+
+    function testWithdrawCollateralTransfersTokensToUser() external {
+        // 1. Lock collateral for 30 days
+        uint256 lockAmount = 1 ether;
+        vm.startPrank(user);
+        stablecoinMinter.lockCollateral(mockCollateral1, lockAmount, 30 days);
+        vm.stopPrank();
+
+        // 2. Advance time beyond the lock expiration
+        vm.warp(block.timestamp + 31 days);
+
+        // 3. Capture the user's balance before withdrawal
+        uint256 userBalanceBefore = mockCollateral1.balanceOf(user);
+
+        // 4. Execute the withdrawal
+        vm.startPrank(user);
+        stablecoinMinter.withdrawCollateral(mockCollateral1);
+        vm.stopPrank();
+
+        // 5. Capture the user's balance after withdrawal
+        uint256 userBalanceAfter = mockCollateral1.balanceOf(user);
+
+        // 6. The difference should be exactly the locked amount (assuming the user had a non-zero amount locked).
+        assertEq(userBalanceAfter, userBalanceBefore + lockAmount, "Collateral not safely transferred to user");
+    }
+
+    function testMintStablecoinRevertsIfExceedsMaxCollateral() external {
+        // 1. Forcefully set totalCollateralLocked above MAXIMUM_COLLATERAL
+        //    We know totalCollateralLocked is in storage slot 0,
+        //    so we can manually set it with vm.store().
+
+        bytes32 slot0 = bytes32(uint256(0)); // totalCollateralLocked is at slot 0
+        uint256 aboveMax = stablecoinMinter.MAXIMUM_COLLATERAL() + 1; // 1 wei above maximum
+        bytes32 storeValue = bytes32(aboveMax);
+
+        vm.store(address(stablecoinMinter), slot0, storeValue);
+
+        // 2. (Optional) Ensure userCollateral > MINIMUM_COLLATERAL to pass other checks
+        //    For example, forcibly set userCollateralBalances so that
+        //    the "TotalCollateralLockedMustBeAtLeastMoreThanMinimum()" check doesn't fail.
+
+        //    slot 2 is userCollateralBalances (outer mapping).
+        //    We'll skip that if we've already tested or removed the min check,
+        //    or forcibly set it if needed:
+        /*
+    bytes32 outerSlot = keccak256(abi.encode(user, uint256(2))); 
+    bytes32 finalSlot = keccak256(abi.encode(mockCollateral, outerSlot));
+    vm.store(address(stablecoinMinter), finalSlot, bytes32(uint256(1 ether)));
+        */
+
+        // 3. Now call mintStablecoin() and expect revert with
+        //    StablecoinMinter__TotalCollateralLockedExceedsMaximum
+        vm.startPrank(user);
+        vm.expectRevert(StablecoinMinter.StablecoinMinter__TotalCollateralLockedExceedsMaximum.selector);
+        stablecoinMinter.mintStablecoin();
+        vm.stopPrank();
+    }
 }
