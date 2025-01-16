@@ -11,8 +11,7 @@ contract CollateralManagerTest is Test {
     using CollateralManager for mapping(address => mapping(IERC20 => uint256));
 
     IERC20[] internal allowedCollaterals;
-    mapping(address => mapping(IERC20 => uint256))
-        internal userCollateralBalances;
+    mapping(address => mapping(IERC20 => uint256)) internal userCollateralBalances;
 
     address user1 = address(0x111);
     address user2 = address(0x222);
@@ -36,68 +35,39 @@ contract CollateralManagerTest is Test {
     // A. isAllowedCollaterals() Tests
     // ==========================================
 
-    function testIsAllowedCollaterals_ReturnsTrueIfCollateralIsAllowed()
-        external
-        view
-    {
-        bool isAllowed = allowedCollaterals.isAllowedCollaterals(
-            mockCollateral1
-        );
+    function testIsAllowedCollaterals_ReturnsTrueIfCollateralIsAllowed() external view {
+        bool isAllowed = allowedCollaterals.isAllowedCollaterals(mockCollateral1);
         assertEq(isAllowed, true, "mockCollateral1 should be allowed");
     }
 
-    function testIsAllowedCollaterals_ReturnsFalseIfCollateralNotAllowed()
-        external
-        view
-    {
-        bool isAllowed = allowedCollaterals.isAllowedCollaterals(
-            mockCollateral3
-        );
+    function testIsAllowedCollaterals_ReturnsFalseIfCollateralNotAllowed() external view {
+        bool isAllowed = allowedCollaterals.isAllowedCollaterals(mockCollateral3);
         assertEq(isAllowed, false, "mockCollateral3 should NOT be allowed");
     }
 
-    function testIsAllowedCollaterals_ReturnsFalseIfEmptyAllowedCollaterals()
-        external
-    {
+    function testIsAllowedCollaterals_ReturnsFalseIfEmptyAllowedCollaterals() external {
         // 1. Clear the storage array
         delete allowedCollaterals; // Now allowedCollaterals.length == 0 in storage
 
-        bool isAllowed = allowedCollaterals.isAllowedCollaterals(
-            mockCollateral1
-        );
-        assertEq(
-            isAllowed,
-            false,
-            "Should return false for empty collaterals array"
-        );
+        bool isAllowed = allowedCollaterals.isAllowedCollaterals(mockCollateral1);
+        assertEq(isAllowed, false, "Should return false for empty collaterals array");
     }
 
     // ==========================================
     // B. getUserTotalCollateral() Tests
     // ==========================================
 
-    function testGetUserTotalCollateral_ReturnsZeroIfNoCollateral()
-        external
-        view
-    {
+    function testGetUserTotalCollateral_ReturnsZeroIfNoCollateral() external view {
         // user1 has nothing set
-        uint256 total = userCollateralBalances.getUserTotalCollateral(
-            allowedCollaterals,
-            user1
-        );
+        uint256 total = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, user1);
         assertEq(total, 0, "Should be 0 if user has no collateral");
     }
 
-    function testGetUserTotalCollateral_ReturnsSingleCollateralAmount()
-        external
-    {
+    function testGetUserTotalCollateral_ReturnsSingleCollateralAmount() external {
         // user1 has 100 in mockCollateral1
         userCollateralBalances[user1][mockCollateral1] = 100 ether;
 
-        uint256 total = userCollateralBalances.getUserTotalCollateral(
-            allowedCollaterals,
-            user1
-        );
+        uint256 total = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, user1);
         assertEq(total, 100 ether, "Should only sum the single collateral");
     }
 
@@ -105,10 +75,7 @@ contract CollateralManagerTest is Test {
         userCollateralBalances[user1][mockCollateral1] = 50 ether;
         userCollateralBalances[user1][mockCollateral2] = 150 ether;
 
-        uint256 total = userCollateralBalances.getUserTotalCollateral(
-            allowedCollaterals,
-            user1
-        );
+        uint256 total = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, user1);
         assertEq(total, 200 ether, "Should sum multiple collaterals for user1");
     }
 
@@ -121,14 +88,8 @@ contract CollateralManagerTest is Test {
         userCollateralBalances[user2][mockCollateral1] = 10 ether;
         userCollateralBalances[user2][mockCollateral2] = 90 ether;
 
-        uint256 totalUser1 = userCollateralBalances.getUserTotalCollateral(
-            allowedCollaterals,
-            user1
-        );
-        uint256 totalUser2 = userCollateralBalances.getUserTotalCollateral(
-            allowedCollaterals,
-            user2
-        );
+        uint256 totalUser1 = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, user1);
+        uint256 totalUser2 = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, user2);
 
         assertEq(totalUser1, 200 ether, "User1 total should be 50 + 150 = 200");
         assertEq(totalUser2, 100 ether, "User2 total should be 10 + 90 = 100");
