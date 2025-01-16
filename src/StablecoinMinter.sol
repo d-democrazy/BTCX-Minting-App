@@ -40,19 +40,13 @@ contract StablecoinMinter {
     IERC20[] public allowedCollaterals; // Allowed collaterals (stBTC, solvBTC, aBTC)
     uint256 public constant collateralToStablecoinRatio = 100; // Collateral : stablecoin is 1 : 100
 
-    mapping(address => mapping(IERC20 => uint256))
-        public userCollateralBalances;
+    mapping(address => mapping(IERC20 => uint256)) public userCollateralBalances;
     mapping(address => uint256) public userStablecoinBalances;
 
     mapping(address => mapping(IERC20 => uint256)) public lockExpiration;
     mapping(address => mapping(IERC20 => uint256)) public lockTimestamp;
 
-    event LockCountdown(
-        address indexed user,
-        IERC20 indexed collateral,
-        uint256 remainingTime,
-        uint256 timestamp
-    );
+    event LockCountdown(address indexed user, IERC20 indexed collateral, uint256 remainingTime, uint256 timestamp);
 
     constructor(IERC20[] memory _allowedCollaterals) {
         if (_allowedCollaterals.length == 0) {
@@ -67,11 +61,7 @@ contract StablecoinMinter {
         }
     }
 
-    function lockCollateral(
-        IERC20 collateral,
-        uint256 amount,
-        uint256 duration
-    ) external {
+    function lockCollateral(IERC20 collateral, uint256 amount, uint256 duration) external {
         if (amount <= 0) {
             revert StablecoinMinter__MoreThanZeroAmount();
         }
@@ -88,12 +78,8 @@ contract StablecoinMinter {
 
         // Validate duration: must be one of the allowed duration
         if (
-            duration != 10 days &&
-            duration != 30 days &&
-            duration != 90 days &&
-            duration != 180 days &&
-            duration != 365 days &&
-            duration != 1095 days
+            duration != 10 days && duration != 30 days && duration != 90 days && duration != 180 days
+                && duration != 365 days && duration != 1095 days
         ) {
             revert StablecoinMinter__InvalidLockDuration();
         }
@@ -120,12 +106,7 @@ contract StablecoinMinter {
         lockTimestamp[msg.sender][collateral] = block.timestamp;
 
         // Transfer collateral from the user to the contract
-        SafeERC20.safeTransferFrom(
-            collateral,
-            msg.sender,
-            address(this),
-            amount
-        );
+        SafeERC20.safeTransferFrom(collateral, msg.sender, address(this), amount);
     }
 
     function mintStablecoin() external {
@@ -148,19 +129,14 @@ contract StablecoinMinter {
         // );
 
         // Use library to calculate the user's collateral balance
-        uint256 userTotalCollateral = userCollateralBalances
-            .getUserTotalCollateral(allowedCollaterals, msg.sender);
+        uint256 userTotalCollateral = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, msg.sender);
 
         // Calculate user's mintable stablecoins based on their share of the total collateral
-        uint256 mintableStablecoin = (userTotalCollateral *
-            collateralToStablecoinRatio *
-            totalCollateralLocked) / totalCollateralLocked;
+        uint256 mintableStablecoin =
+            (userTotalCollateral * collateralToStablecoinRatio * totalCollateralLocked) / totalCollateralLocked;
 
         // Ensure minting doesn't exceed the maximum supply
-        if (
-            userStablecoinBalances[msg.sender] + mintableStablecoin >
-            maximumSupply
-        ) {
+        if (userStablecoinBalances[msg.sender] + mintableStablecoin > maximumSupply) {
             revert StablecoinMinter__ExceedsMaximumSupply();
         }
         // require(
@@ -173,10 +149,7 @@ contract StablecoinMinter {
         userStablecoinBalances[msg.sender] += mintableStablecoin;
     }
 
-    function redeemCollateral(
-        IERC20 collateral,
-        uint256 stablecoinAmount
-    ) external {
+    function redeemCollateral(IERC20 collateral, uint256 stablecoinAmount) external {
         // Check if user has enough stablecoins
         if (userStablecoinBalances[msg.sender] < stablecoinAmount) {
             revert StablecoinMinter__InsufficientStablecoinBalance();
@@ -198,8 +171,7 @@ contract StablecoinMinter {
         // );
 
         // Check if user has enough collateral
-        uint256 collateralAmount = stablecoinAmount /
-            collateralToStablecoinRatio;
+        uint256 collateralAmount = stablecoinAmount / collateralToStablecoinRatio;
         if (userCollateralBalances[msg.sender][collateral] < collateralAmount) {
             revert StablecoinMinter__InsufficientCollateralBalance();
         }
@@ -215,14 +187,8 @@ contract StablecoinMinter {
         SafeERC20.safeTransfer(collateral, msg.sender, collateralAmount);
 
         // Emit LockCountDown
-        uint256 remainingTime = lockExpiration[msg.sender][collateral] -
-            block.timestamp;
-        emit LockCountdown(
-            msg.sender,
-            collateral,
-            remainingTime,
-            block.timestamp
-        );
+        uint256 remainingTime = lockExpiration[msg.sender][collateral] - block.timestamp;
+        emit LockCountdown(msg.sender, collateral, remainingTime, block.timestamp);
     }
 
     function withdrawCollateral(IERC20 collateral) external {
