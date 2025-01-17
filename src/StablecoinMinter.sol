@@ -10,7 +10,6 @@ contract StablecoinMinter {
     /**
      * errors ******
      */
-    //
     error StablecoinMinter__InsufficientAllowedCollateral();
     error StablecoinMinter__MoreThanZeroAmount();
     error StablecoinMinter__NotAllowedCollateral();
@@ -52,10 +51,6 @@ contract StablecoinMinter {
         if (_allowedCollaterals.length == 0) {
             revert StablecoinMinter__InsufficientAllowedCollateral();
         }
-        // require(
-        //     _allowedCollaterals.length > 0,
-        //     "At least one collateral required"
-        // );
         for (uint256 i = 0; i < _allowedCollaterals.length; i++) {
             allowedCollaterals.push(_allowedCollaterals[i]);
         }
@@ -65,16 +60,11 @@ contract StablecoinMinter {
         if (amount <= 0) {
             revert StablecoinMinter__MoreThanZeroAmount();
         }
-        // require(amount > 0, "Amount must be greater than zero");
 
         // Use library to check if the collateral is allowed
         if (!allowedCollaterals.isAllowedCollaterals(collateral)) {
             revert StablecoinMinter__NotAllowedCollateral();
         }
-        // require(
-        //     allowedCollaterals.isAllowedCollaterals(collateral),
-        //     "Collateral not allowed"
-        // );
 
         // Validate duration: must be one of the allowed duration
         if (
@@ -83,15 +73,6 @@ contract StablecoinMinter {
         ) {
             revert StablecoinMinter__InvalidLockDuration();
         }
-        // require(
-        //     duration == 10 days ||
-        //         duration == 30 days ||
-        //         duration == 90 days ||
-        //         duration == 180 days ||
-        //         duration == 365 days ||
-        //         duration == 1095 days,
-        //     "Invalid lock durations"
-        // );
 
         if (totalCollateralLocked + amount > MAXIMUM_COLLATERAL) {
             revert StablecoinMinter__TotalCollateralLockedExceedsMaximum();
@@ -116,17 +97,9 @@ contract StablecoinMinter {
             revert StablecoinMinter__TotalCollateralLockedMustBeAtLeastMoreThanMinimum();
         }
 
-        // require(
-        //     totalCollateralLocked >= MINIMUM_COLLATERAL,
-        //     "Total collateral locked must be at least 0.01 units"
-        // );
         if (totalCollateralLocked + amount > MAXIMUM_COLLATERAL) {
             revert StablecoinMinter__TotalCollateralLockedExceedsMaximum();
         }
-        // require(
-        //     totalCollateralLocked <= MAXIMUM_COLLATERAL,
-        //     "Total collateral locked exceeds 21,000,000 units"
-        // );
 
         // Use library to calculate the user's collateral balance
         uint256 userTotalCollateral = userCollateralBalances.getUserTotalCollateral(allowedCollaterals, msg.sender);
@@ -139,11 +112,6 @@ contract StablecoinMinter {
         if (userStablecoinBalances[msg.sender] + mintableStablecoin > maximumSupply) {
             revert StablecoinMinter__ExceedsMaximumSupply();
         }
-        // require(
-        //     userStablecoinBalances[msg.sender] + mintableStablecoin <=
-        //         maximumSupply,
-        //     "Exceeds maximum supply"
-        // );
 
         // Update the user's stablecoin balances
         userStablecoinBalances[msg.sender] += mintableStablecoin;
@@ -155,31 +123,15 @@ contract StablecoinMinter {
             revert StablecoinMinter__InsufficientStablecoinBalance();
         }
 
-        // require(
-        //     userStablecoinBalances[msg.sender] >= stablecoinAmount,
-        //     "Insufficient stablecoin balance"
-        // );
-
-        // If the is EXPIRED (block.timestamp >= lockExpiration), revert
         if (block.timestamp >= lockExpiration[msg.sender][collateral]) {
             revert StablecoinMinter__LockExpired_WithdrawDirectly();
         }
-
-        // require(
-        //     block.timestamp < lockExpiration[msg.sender][collateral],
-        //     "Lock expired, withdraw directly!"
-        // );
 
         // Check if user has enough collateral
         uint256 collateralAmount = stablecoinAmount / collateralToStablecoinRatio;
         if (userCollateralBalances[msg.sender][collateral] < collateralAmount) {
             revert StablecoinMinter__InsufficientCollateralBalance();
         }
-
-        // require(
-        //     userCollateralBalances[msg.sender][collateral] >= collateralAmount,
-        //     "insufficient collateral"
-        // );
 
         // Burn stablecoins and reduce collateral balance
         userStablecoinBalances[msg.sender] -= stablecoinAmount;
@@ -196,16 +148,10 @@ contract StablecoinMinter {
             revert StablecoinMinter__LockStillAlive();
         }
 
-        // require(
-        //     block.timestamp >= lockExpiration[msg.sender][collateral],
-        //     "Lock duration not over"
-        // );
-
         uint256 amount = userCollateralBalances[msg.sender][collateral];
         if (amount <= 0) {
             revert StablecoinMinter__NoCollateralToWithdraw();
         }
-        // require(amount > 0, "No collateral to wi thdraw");
 
         // Decrease the total collateral locked by the amount being withdrawn
         totalCollateralLocked -= amount;
